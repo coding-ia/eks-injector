@@ -140,12 +140,12 @@ func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) 
 
 		var patches []PatchOperation
 		found := false
-		for key, value := range configMap.Data {
+		for key, _ := range configMap.Data {
 			if key == "logicalName" {
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/data/%s", key),
-					Value: value,
+					Value: clusterName,
 				})
 				found = true
 				break
