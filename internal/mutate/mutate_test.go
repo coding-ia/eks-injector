@@ -175,7 +175,7 @@ func TestMutatesValidRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := Mutate([]byte(rawJSON), "test-cluster")
+	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
 	_ = data
 	_ = err
 }

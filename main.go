@@ -40,7 +40,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Println(string(body))
 
 	clusterName := os.Getenv("EKS_CLUSTER_NAME")
-	responseBody, err := mutate.Mutate(body, clusterName)
+	responseBody, err := mutate.ProcessAdmissionReview(body, clusterName)
 	if err != nil {
 		log.Println(err)
 	}
