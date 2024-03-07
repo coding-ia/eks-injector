@@ -33,6 +33,9 @@ func ProcessAdmissionReview(content []byte, clusterName string) ([]byte, error) 
 	case "Deployment":
 		responseBody, err := mutateDeployment(admReview, clusterName)
 		return responseBody, err
+	case "ConfigMap":
+		responseBody, err := mutateConfigMap(admReview, clusterName)
+		return responseBody, err
 	default:
 		log.Println("Unable to process resource.")
 	}
@@ -119,25 +122,14 @@ func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string)
 	return responseBody, nil
 }
 
-/*
-func Mutate(content []byte, clusterName string) ([]byte, error) {
+func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) ([]byte, error) {
 	var responseBody []byte
-	admReview := admissionv1.AdmissionReview{}
-
-	if clusterName == "" {
-		return nil, errors.New("cluster name is not defined")
-	}
-
-	if err := json.Unmarshal(content, &admReview); err != nil {
-		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
-	}
-
 	ar := admReview.Request
 
 	if ar != nil {
 		resp := admissionv1.AdmissionResponse{}
-		var deployment *appsv1.Deployment
-		if err := json.Unmarshal(ar.Object.Raw, &deployment); err != nil {
+		var configMap *corev1.ConfigMap
+		if err := json.Unmarshal(ar.Object.Raw, &configMap); err != nil {
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
@@ -148,43 +140,24 @@ func Mutate(content []byte, clusterName string) ([]byte, error) {
 
 		var patches []PatchOperation
 		found := false
-		for cdx, container := range deployment.Spec.Template.Spec.Containers {
-			envVar := 0
-
-			for edx, env := range container.Env {
-				envVar++
-
-				if env.Name == "logicalName" {
-					patches = append(patches, PatchOperation{
-						Op:    "replace",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-						Value: clusterName,
-					})
-					found = true
-					break
-				}
+		for key, value := range configMap.Data {
+			if key == "logicalName" {
+				patches = append(patches, PatchOperation{
+					Op:    "replace",
+					Path:  fmt.Sprintf("/data/%s", key),
+					Value: value,
+				})
+				found = true
+				break
 			}
+		}
 
-			if !found {
-				if envVar == 0 {
-					patches = append(patches, PatchOperation{
-						Op:   "add",
-						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
-						Value: []corev1.EnvVar{
-							{
-								Name:  "logicalName",
-								Value: clusterName,
-							},
-						},
-					})
-				} else {
-					patches = append(patches, PatchOperation{
-						Op:    "add",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-						Value: corev1.EnvVar{Name: "logicalName", Value: clusterName},
-					})
-				}
-			}
+		if !found {
+			patches = append(patches, PatchOperation{
+				Op:    "add",
+				Path:  fmt.Sprintf("/data/%s", "logicalName"),
+				Value: clusterName,
+			})
 		}
 
 		patchBytes, err := json.Marshal(patches)
@@ -208,5 +181,3 @@ func Mutate(content []byte, clusterName string) ([]byte, error) {
 
 	return responseBody, nil
 }
-
-*/
