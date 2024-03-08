@@ -19,7 +19,7 @@ type Policy struct {
 func FindDeploymentPolicy(namespace string, name string, keyType string) (*Policy, error) {
 	var policy *Policy
 
-	if namespace == "sentinel" && name == "" && keyType == "env" {
+	if namespace == "sentinelone" && name == "sentinelone-helper" && keyType == "env" {
 		policy = &Policy{
 			Namespace: namespace,
 			Name:      name,
