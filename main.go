@@ -2,6 +2,7 @@ package main
 
 import (
 	"eks-inject/internal/mutate"
+	"eks-inject/internal/node"
 	"fmt"
 	"io"
 	"log"
@@ -39,7 +40,14 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Println(string(body))
 
-	clusterName := os.Getenv("EKS_CLUSTER_NAME")
+	clusterName, err := node.DiscoverClusterName()
+	if err != nil {
+		log.Println("Unable to discover cluster name, reading environment variable.")
+		clusterName = os.Getenv("EKS_CLUSTER_NAME")
+	}
+
+	log.Printf("Clustername: %s", clusterName)
+
 	responseBody, err := mutate.ProcessAdmissionReview(body, clusterName)
 	if err != nil {
 		log.Println(err)

@@ -27,6 +27,10 @@ spec:
           env:
           - name: EKS_CLUSTER_NAME
             value: {{ .Values.global.clusterName }}
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
       volumes:
       - name: tls-certs-volume
         secret:
