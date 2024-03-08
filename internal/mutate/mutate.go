@@ -58,6 +58,11 @@ func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string)
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
+		policy, _ := policies.FindDeploymentPolicy(deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
+		if policy == nil {
+			return responseBody, nil
+		}
+
 		resp.Allowed = true
 		resp.UID = ar.UID
 		pT := admissionv1.PatchTypeJSONPatch
@@ -71,7 +76,7 @@ func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string)
 			for edx, env := range container.Env {
 				envVar++
 
-				if env.Name == "logicalName" {
+				if env.Name == policy.Key {
 					patches = append(patches, PatchOperation{
 						Op:    "replace",
 						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
@@ -89,7 +94,7 @@ func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string)
 						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
 						Value: []corev1.EnvVar{
 							{
-								Name:  "logicalName",
+								Name:  policy.Key,
 								Value: clusterName,
 							},
 						},
@@ -98,7 +103,7 @@ func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string)
 					patches = append(patches, PatchOperation{
 						Op:    "add",
 						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-						Value: corev1.EnvVar{Name: "logicalName", Value: clusterName},
+						Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
 					})
 				}
 			}
@@ -219,6 +224,11 @@ func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) 
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
+		policy, _ := policies.FindConfigMapPolicy(configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
+		if policy == nil {
+			return responseBody, nil
+		}
+
 		resp.Allowed = true
 		resp.UID = ar.UID
 		pT := admissionv1.PatchTypeJSONPatch
@@ -227,7 +237,7 @@ func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) 
 		var patches []PatchOperation
 		found := false
 		for key, _ := range configMap.Data {
-			if key == "logicalName" {
+			if key == policy.Key {
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/data/%s", key),
@@ -241,7 +251,7 @@ func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) 
 		if !found {
 			patches = append(patches, PatchOperation{
 				Op:    "add",
-				Path:  fmt.Sprintf("/data/%s", "logicalName"),
+				Path:  fmt.Sprintf("/data/%s", policy.Key),
 				Value: clusterName,
 			})
 		}

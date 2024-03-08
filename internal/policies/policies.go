@@ -16,10 +16,25 @@ type Policy struct {
 	SkipReplace bool   `json:"skipReplace"`
 }
 
+func FindDeploymentPolicy(namespace string, name string, keyType string) (*Policy, error) {
+	var policy *Policy
+
+	if namespace == "sentinel" && name == "" && keyType == "env" {
+		policy = &Policy{
+			Namespace: namespace,
+			Name:      name,
+			Key:       "CLUSTER_NAME",
+			Type:      keyType,
+		}
+	}
+
+	return policy, nil
+}
+
 func FindDaemonSetPolicy(namespace string, name string, keyType string) (*Policy, error) {
 	var policy *Policy
 
-	if namespace == "test" && name == "nginx-daemonset" && keyType == "env" {
+	if namespace == "aqua" && name == "aqua-enforcer-ds" && keyType == "env" {
 		policy = &Policy{
 			Namespace: namespace,
 			Name:      name,
@@ -39,7 +54,7 @@ func FindConfigMapPolicy(namespace string, name string, keyType string) (*Policy
 			Namespace: namespace,
 			Name:      name,
 			Key:       "AQUA_LOGICAL_NAME",
-			Type:      keyType,
+			Type:      "",
 		}
 	}
 
