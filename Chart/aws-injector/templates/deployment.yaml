@@ -14,6 +14,7 @@ spec:
       labels:
         app: eks-inject-webhook
     spec:
+      serviceAccountName: aws-injector-sa
       containers:
         - name: eks-inject-webhook-container
           image: "{{ .Values.image.repository }}{{ .Values.image.name }}:{{ default .Values.image.tag .Chart.AppVersion }}"

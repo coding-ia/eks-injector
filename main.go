@@ -38,8 +38,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", err)
 	}
 
-	log.Println(string(body))
-
 	clusterName, err := node.DiscoverClusterName()
 	if err != nil {
 		log.Println("Unable to discover cluster name, reading environment variable.")
@@ -47,6 +45,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Clustername: %s", clusterName)
+	log.Println(string(body))
 
 	responseBody, err := mutate.ProcessAdmissionReview(body, clusterName)
 	if err != nil {
