@@ -1,6 +1,7 @@
 package mutate
 
 import (
+	"eks-inject/internal/policies"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,6 +139,12 @@ func mutateDaemonSet(admReview admissionv1.AdmissionReview, clusterName string) 
 
 		resp.Allowed = true
 		resp.UID = ar.UID
+
+		policy, _ := policies.FindDaemonSetPolicy(daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
+		if policy == nil {
+			return responseBody, nil
+		}
+
 		pT := admissionv1.PatchTypeJSONPatch
 		resp.PatchType = &pT
 
@@ -149,7 +156,7 @@ func mutateDaemonSet(admReview admissionv1.AdmissionReview, clusterName string) 
 			for edx, env := range container.Env {
 				envVar++
 
-				if env.Name == "logicalName" {
+				if env.Name == policy.Key {
 					patches = append(patches, PatchOperation{
 						Op:    "replace",
 						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
@@ -166,17 +173,14 @@ func mutateDaemonSet(admReview admissionv1.AdmissionReview, clusterName string) 
 						Op:   "add",
 						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
 						Value: []corev1.EnvVar{
-							{
-								Name:  "logicalName",
-								Value: clusterName,
-							},
+							{Name: policy.Key, Value: clusterName},
 						},
 					})
 				} else {
 					patches = append(patches, PatchOperation{
 						Op:    "add",
 						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-						Value: corev1.EnvVar{Name: "logicalName", Value: clusterName},
+						Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
 					})
 				}
 			}
