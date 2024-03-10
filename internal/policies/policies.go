@@ -16,6 +16,22 @@ type Policy struct {
 	SkipReplace bool   `json:"skipReplace"`
 }
 
+type ConfigPolicy struct {
+	Namespace   string `json:"namespace"`
+	Name        string `json:"name"`
+	Key         string `json:"key"`
+	Type        string `json:"keyType"`
+	Value       string `json:"value,omitempty"`
+	SkipAdd     bool   `json:"skipAdd"`
+	SkipReplace bool   `json:"skipReplace"`
+}
+
+type SSMParameter struct {
+	Region  string `json:"region"`
+	Name    string `json:"name"`
+	Decrypt bool   `json:"decrypt"`
+}
+
 func FindDeploymentPolicy(namespace string, name string, keyType string) (*Policy, error) {
 	var policy *Policy
 
