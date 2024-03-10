@@ -17,13 +17,14 @@ type Policy struct {
 }
 
 type ConfigPolicy struct {
-	Namespace   string `json:"namespace"`
-	Name        string `json:"name"`
-	Key         string `json:"key"`
-	Type        string `json:"keyType"`
-	Value       string `json:"value,omitempty"`
-	SkipAdd     bool   `json:"skipAdd"`
-	SkipReplace bool   `json:"skipReplace"`
+	Namespace   string       `json:"namespace"`
+	Name        string       `json:"name"`
+	Key         string       `json:"key"`
+	Type        string       `json:"keyType"`
+	Value       string       `json:"value,omitempty"`
+	SkipAdd     bool         `json:"skipAdd"`
+	SkipReplace bool         `json:"skipReplace"`
+	SSM         SSMParameter `json:"ssm,omitempty"`
 }
 
 type SSMParameter struct {
