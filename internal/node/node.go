@@ -13,6 +13,7 @@ func DiscoverClusterName() (string, error) {
 }
 
 func DiscoverEnvironment() (string, error) {
+
 	return getNodeLabel("alpha.coding-ia.com/environment")
 }
 
