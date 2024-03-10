@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eks-inject-webhook-deployment
+  labels:
+    {{- include "aws-injector.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eks-inject-webhook
+  template:
+    metadata:
+      labels:
+        app: eks-inject-webhook
+    spec:
+      serviceAccountName: aws-injector-sa
+      containers:
+        - name: eks-inject-webhook-container
+          image: "{{ .Values.image.repository }}{{ .Values.image.name }}:{{ default .Values.image.tag .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          volumeMounts:
+          - name: tls-certs-volume
+            mountPath: /etc/ssl
+            readOnly: true
+          env:
+          - name: CLUSTER_NAME
+            value: {{ .Values.global.clusterName }}
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      volumes:
+      - name: tls-certs-volume
+        secret:
+          secretName: eks-inject-webhook-certs
