@@ -26,7 +26,7 @@ spec:
             mountPath: /etc/ssl
             readOnly: true
           env:
-          - name: EKS_CLUSTER_NAME
+          - name: CLUSTER_NAME
             value: {{ .Values.global.clusterName }}
           - name: NODE_NAME
             valueFrom:

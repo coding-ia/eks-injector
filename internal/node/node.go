@@ -9,6 +9,14 @@ import (
 )
 
 func DiscoverClusterName() (string, error) {
+	return getNodeLabel("alpha.coding-ia.com/cluster-name")
+}
+
+func DiscoverEnvironment() (string, error) {
+	return getNodeLabel("alpha.coding-ia.com/environment")
+}
+
+func getNodeLabel(label string) (string, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return "", err
@@ -26,6 +34,6 @@ func DiscoverClusterName() (string, error) {
 		return "", err
 	}
 
-	clusterName := node.Labels["alpha.webhook.io/cluster-name"]
+	clusterName := node.Labels[label]
 	return clusterName, nil
 }
