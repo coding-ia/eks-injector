@@ -311,6 +311,113 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 	}
 }
 
+func TestMutatesConfigMapRequestSSM(t *testing.T) {
+	rawJSON := `{
+		"kind": "AdmissionReview",
+		"apiVersion": "admission.k8s.io/v1",
+		"request": {
+			"uid": "42b2eea6-2458-421a-ad7d-cd49f90abec5",
+			"kind": {
+				"group": "",
+				"version": "v1",
+				"kind": "ConfigMap"
+			},
+			"resource": {
+				"group": "",
+				"version": "v1",
+				"resource": "configmaps"
+			},
+			"requestKind": {
+				"group": "",
+				"version": "v1",
+				"kind": "ConfigMap"
+			},
+			"requestResource": {
+				"group": "",
+				"version": "v1",
+				"resource": "configmaps"
+			},
+			"name": "example-configmap-ssm",
+			"namespace": "default",
+			"operation": "CREATE",
+			"userInfo": {
+				"username": "system:admin",
+				"groups": [
+					"system:masters",
+					"system:authenticated"
+				]
+			},
+			"object": {
+				"kind": "ConfigMap",
+				"apiVersion": "v1",
+				"metadata": {
+					"name": "example-configmap-ssm",
+					"namespace": "default",
+					"creationTimestamp": null,
+					"annotations": {
+						"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"example-configmap\",\"namespace\":\"default\"}}\n"
+					},
+					"managedFields": [
+						{
+							"manager": "kubectl-client-side-apply",
+							"operation": "Update",
+							"apiVersion": "v1",
+							"time": "2024-03-07T02:43:38Z",
+							"fieldsType": "FieldsV1",
+							"fieldsV1": {
+								"f:data": {
+									".": {},
+									"f:key1": {},
+									"f:key2": {},
+									"f:key3": {}
+								},
+								"f:metadata": {
+									"f:annotations": {
+										".": {},
+										"f:kubectl.kubernetes.io/last-applied-configuration": {}
+									}
+								}
+							}
+						}
+					]
+				},
+				"data": {
+					"logicalName": "test"
+				}
+			},
+			"oldObject": null,
+			"dryRun": false,
+			"options": {
+				"kind": "CreateOptions",
+				"apiVersion": "meta.k8s.io/v1",
+				"fieldManager": "kubectl-client-side-apply",
+				"fieldValidation": "Strict"
+			}
+		}
+	}`
+
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "93a40493cb6cb61e4d7e409737099fe6" {
+			t.Fail()
+		}
+	}
+}
+
 func TestMutatesDaemonSetRequest(t *testing.T) {
 	rawJSON := `{
 		"kind": "AdmissionReview",

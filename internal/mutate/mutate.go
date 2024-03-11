@@ -1,6 +1,7 @@
 package mutate
 
 import (
+	"eks-inject/internal/parameter"
 	"eks-inject/internal/policies"
 	"eks-inject/internal/string_parser"
 	"encoding/json"
@@ -71,7 +72,7 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 		return nil
 	}
 
-	value, err := string_parser.ParseString(policy.Value, variables)
+	value, err := getValue(policy, variables)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 		return nil
 	}
 
-	value, err := string_parser.ParseString(policy.Value, variables)
+	value, err := getValue(policy, variables)
 	if err != nil {
 		return err
 	}
@@ -214,7 +215,7 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		return nil
 	}
 
-	value, err := string_parser.ParseString(policy.Value, variables)
+	value, err := getValue(policy, variables)
 	if err != nil {
 		return err
 	}
@@ -255,4 +256,21 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 	}
 
 	return nil
+}
+
+func getValue(policy *policies.Policy, variables map[string]string) (string, error) {
+	if policy.Value == "" && policy.SSM.Name != "" {
+		parameterName, err := string_parser.ParseString(policy.SSM.Name, variables)
+		if err != nil {
+			return "", err
+		}
+		value, err := parameter.GetParameter(policy.SSM.Region, parameterName, policy.SSM.Decrypt)
+		return value, err
+	}
+	value, err := string_parser.ParseString(policy.Value, variables)
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
 }

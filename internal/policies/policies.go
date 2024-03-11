@@ -7,16 +7,6 @@ type Policies struct {
 }
 
 type Policy struct {
-	Namespace   string `json:"namespace"`
-	Name        string `json:"name"`
-	Key         string `json:"key"`
-	Type        string `json:"keyType"`
-	Value       string `json:"value,omitempty"`
-	SkipAdd     bool   `json:"skipAdd"`
-	SkipReplace bool   `json:"skipReplace"`
-}
-
-type ConfigPolicy struct {
 	Namespace   string       `json:"namespace"`
 	Name        string       `json:"name"`
 	Key         string       `json:"key"`
@@ -102,6 +92,19 @@ func FindConfigMapPolicy(namespace string, name string, keyType string) (*Policy
 			Key:       "logicalName",
 			Value:     "{{ .ClusterName }}",
 			Type:      "",
+		}
+	}
+	if namespace == "default" && name == "example-configmap-ssm" && keyType == "" {
+		policy = &Policy{
+			Namespace: namespace,
+			Name:      name,
+			Key:       "logicalName",
+			Type:      "",
+			SSM: SSMParameter{
+				Region:  "us-east-2",
+				Name:    "/cluster/{{ .Version }}/license",
+				Decrypt: false,
+			},
 		}
 	}
 
