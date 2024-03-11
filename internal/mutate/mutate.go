@@ -2,6 +2,7 @@ package mutate
 
 import (
 	"eks-inject/internal/policies"
+	"eks-inject/internal/string_parser"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,12 +19,8 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func ProcessAdmissionReview(content []byte, clusterName string) ([]byte, error) {
+func ProcessAdmissionReview(content []byte, variables map[string]string) ([]byte, error) {
 	adminReview := admissionv1.AdmissionReview{}
-
-	if clusterName == "" {
-		return nil, errors.New("cluster name is not defined")
-	}
 
 	if err := json.Unmarshal(content, &adminReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
@@ -41,11 +38,11 @@ func ProcessAdmissionReview(content []byte, clusterName string) ([]byte, error) 
 	var err error
 	switch adminReview.Request.Kind.Kind {
 	case "Deployment":
-		err = mutateDeployment(adminReview.Request, &adminResponse, clusterName)
+		err = mutateDeployment(adminReview.Request, &adminResponse, variables)
 	case "ConfigMap":
-		err = mutateConfigMap(adminReview.Request, &adminResponse, clusterName)
+		err = mutateConfigMap(adminReview.Request, &adminResponse, variables)
 	case "DaemonSet":
-		err = mutateDaemonSet(adminReview.Request, &adminResponse, clusterName)
+		err = mutateDaemonSet(adminReview.Request, &adminResponse, variables)
 	default:
 		log.Println("Unable to process resource.")
 	}
@@ -63,7 +60,7 @@ func ProcessAdmissionReview(content []byte, clusterName string) ([]byte, error) 
 	return responseBody, nil
 }
 
-func mutateDeployment(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+func mutateDeployment(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
 	var deployment *appsv1.Deployment
 	if err := json.Unmarshal(request.Object.Raw, &deployment); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
@@ -72,6 +69,11 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 	policy, _ := policies.FindDeploymentPolicy(deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
 	if policy == nil {
 		return nil
+	}
+
+	value, err := string_parser.ParseString(policy.Value, variables)
+	if err != nil {
+		return err
 	}
 
 	pT := admissionv1.PatchTypeJSONPatch
@@ -89,7 +91,7 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-					Value: clusterName,
+					Value: value,
 				})
 				found = true
 				break
@@ -104,7 +106,7 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 					Value: []corev1.EnvVar{
 						{
 							Name:  policy.Key,
-							Value: clusterName,
+							Value: value,
 						},
 					},
 				})
@@ -112,7 +114,7 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 				patches = append(patches, PatchOperation{
 					Op:    "add",
 					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-					Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
+					Value: corev1.EnvVar{Name: policy.Key, Value: value},
 				})
 			}
 		}
@@ -131,7 +133,7 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 	return nil
 }
 
-func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
 	var daemonSet *appsv1.DaemonSet
 	if err := json.Unmarshal(request.Object.Raw, &daemonSet); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
@@ -140,6 +142,11 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 	policy, _ := policies.FindDaemonSetPolicy(daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
 	if policy == nil {
 		return nil
+	}
+
+	value, err := string_parser.ParseString(policy.Value, variables)
+	if err != nil {
+		return err
 	}
 
 	pT := admissionv1.PatchTypeJSONPatch
@@ -157,7 +164,7 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-					Value: clusterName,
+					Value: value,
 				})
 				found = true
 				break
@@ -170,14 +177,14 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 					Op:   "add",
 					Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
 					Value: []corev1.EnvVar{
-						{Name: policy.Key, Value: clusterName},
+						{Name: policy.Key, Value: value},
 					},
 				})
 			} else {
 				patches = append(patches, PatchOperation{
 					Op:    "add",
 					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-					Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
+					Value: corev1.EnvVar{Name: policy.Key, Value: value},
 				})
 			}
 		}
@@ -196,7 +203,7 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 	return nil
 }
 
-func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
 	var configMap *corev1.ConfigMap
 	if err := json.Unmarshal(request.Object.Raw, &configMap); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
@@ -205,6 +212,11 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 	policy, _ := policies.FindConfigMapPolicy(configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
 	if policy == nil {
 		return nil
+	}
+
+	value, err := string_parser.ParseString(policy.Value, variables)
+	if err != nil {
+		return err
 	}
 
 	pT := admissionv1.PatchTypeJSONPatch
@@ -217,7 +229,7 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 			patches = append(patches, PatchOperation{
 				Op:    "replace",
 				Path:  fmt.Sprintf("/data/%s", key),
-				Value: clusterName,
+				Value: value,
 			})
 			found = true
 			break
@@ -228,7 +240,7 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		patches = append(patches, PatchOperation{
 			Op:    "add",
 			Path:  fmt.Sprintf("/data/%s", policy.Key),
-			Value: clusterName,
+			Value: value,
 		})
 	}
 

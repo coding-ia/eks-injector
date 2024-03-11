@@ -182,7 +182,13 @@ func TestMutatesDeploymentRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -283,7 +289,13 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -293,7 +305,7 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 			t.Fail()
 		}
 		hash := getMD5Hash(ar.Response.Patch)
-		if hash != "d41d8cd98f00b204e9800998ecf8427e" {
+		if hash != "93a40493cb6cb61e4d7e409737099fe6" {
 			t.Fail()
 		}
 	}
@@ -482,7 +494,13 @@ func TestMutatesDaemonSetRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -492,7 +510,7 @@ func TestMutatesDaemonSetRequest(t *testing.T) {
 			t.Fail()
 		}
 		hash := getMD5Hash(ar.Response.Patch)
-		if hash != "d41d8cd98f00b204e9800998ecf8427e" {
+		if hash != "78d237c223420aefb9f540ce20650e53" {
 			t.Fail()
 		}
 	}

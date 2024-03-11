@@ -41,6 +41,7 @@ func FindDeploymentPolicy(namespace string, name string, keyType string) (*Polic
 			Namespace: namespace,
 			Name:      name,
 			Key:       "CLUSTER_NAME",
+			Value:     "{{ .ClusterName }}",
 			Type:      keyType,
 		}
 	}
@@ -49,6 +50,7 @@ func FindDeploymentPolicy(namespace string, name string, keyType string) (*Polic
 			Namespace: namespace,
 			Name:      name,
 			Key:       "CLUSTER_NAME",
+			Value:     "{{ .ClusterName }}",
 			Type:      keyType,
 		}
 	}
@@ -64,6 +66,16 @@ func FindDaemonSetPolicy(namespace string, name string, keyType string) (*Policy
 			Namespace: namespace,
 			Name:      name,
 			Key:       "AQUA_LOGICAL_NAME",
+			Value:     "{{ .ClusterName }}",
+			Type:      keyType,
+		}
+	}
+	if namespace == "test" && name == "nginx-daemonset" && keyType == "env" {
+		policy = &Policy{
+			Namespace: namespace,
+			Name:      name,
+			Key:       "AQUA_LOGICAL_NAME",
+			Value:     "{{ .ClusterName }}",
 			Type:      keyType,
 		}
 	}
@@ -79,6 +91,16 @@ func FindConfigMapPolicy(namespace string, name string, keyType string) (*Policy
 			Namespace: namespace,
 			Name:      name,
 			Key:       "AQUA_LOGICAL_NAME",
+			Value:     "{{ .ClusterName }}",
+			Type:      "",
+		}
+	}
+	if namespace == "default" && name == "example-configmap" && keyType == "" {
+		policy = &Policy{
+			Namespace: namespace,
+			Name:      name,
+			Key:       "logicalName",
+			Value:     "{{ .ClusterName }}",
 			Type:      "",
 		}
 	}
