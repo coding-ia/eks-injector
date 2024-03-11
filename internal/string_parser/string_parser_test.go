@@ -4,14 +4,15 @@ import "testing"
 
 func TestParser(t *testing.T) {
 	values := map[string]string{
-		"cluster_name": "test_cluster",
-		"version":      "1.27",
-		"environment":  "sbx",
+		"ClusterName": "test_cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
 	}
-	parsedString, err := ParseString("{{ .cluster_name }}/{{ .version }}/{{ .environment }}", values)
+	parsedString, err := ParseString("{{ .ClusterName }}/{{ .Version }}/{{ .Environment }}", values)
 	if err != nil {
 		t.Fail()
 	}
-	_ = parsedString
-
+	if parsedString != "test_cluster/1.27/sbx" {
+		t.Fail()
+	}
 }
