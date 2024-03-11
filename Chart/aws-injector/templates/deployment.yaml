@@ -23,7 +23,10 @@ spec:
             - containerPort: {{ .Values.service.port }}
           volumeMounts:
           - name: tls-certs-volume
-            mountPath: /etc/ssl
+            mountPath: /mnt/ssl
+            readOnly: true
+          - name: policy-data-volume
+            mountPath: /mnt/data
             readOnly: true
           env:
           {{- if .Values.global.cluster.name }}
@@ -46,3 +49,6 @@ spec:
       - name: tls-certs-volume
         secret:
           secretName: eks-inject-webhook-certs
+      - name: policy-data-volume
+        configMap:
+          name: eks-inject-policies

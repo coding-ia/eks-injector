@@ -28,7 +28,7 @@ func StartServer() {
 		MaxHeaderBytes: 1 << 20, // 1048576
 	}
 
-	log.Fatal(s.ListenAndServeTLS("/etc/ssl/tls.crt", "/etc/ssl/tls.key"))
+	log.Fatal(s.ListenAndServeTLS("/mnt/ssl/tls.crt", "/mnt/ssl/tls.key"))
 }
 
 func BuildConfig() map[string]string {
