@@ -19,228 +19,76 @@ type PatchOperation struct {
 }
 
 func ProcessAdmissionReview(content []byte, clusterName string) ([]byte, error) {
-	var responseBody []byte
-	admReview := admissionv1.AdmissionReview{}
+	adminReview := admissionv1.AdmissionReview{}
 
 	if clusterName == "" {
 		return nil, errors.New("cluster name is not defined")
 	}
 
-	if err := json.Unmarshal(content, &admReview); err != nil {
+	if err := json.Unmarshal(content, &adminReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
-	switch admReview.Request.Kind.Kind {
+	if adminReview.Request == nil {
+		return nil, errors.New("no admin request available")
+	}
+
+	adminResponse := admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     adminReview.Request.UID,
+	}
+
+	var err error
+	switch adminReview.Request.Kind.Kind {
 	case "Deployment":
-		responseBody, err := mutateDeployment(admReview, clusterName)
-		return responseBody, err
+		err = mutateDeployment(adminReview.Request, &adminResponse, clusterName)
 	case "ConfigMap":
-		responseBody, err := mutateConfigMap(admReview, clusterName)
-		return responseBody, err
+		err = mutateConfigMap(adminReview.Request, &adminResponse, clusterName)
 	case "DaemonSet":
-		responseBody, err := mutateDaemonSet(admReview, clusterName)
-		return responseBody, err
+		err = mutateDaemonSet(adminReview.Request, &adminResponse, clusterName)
 	default:
 		log.Println("Unable to process resource.")
 	}
 
-	return responseBody, nil
-}
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
 
-func mutateDeployment(admReview admissionv1.AdmissionReview, clusterName string) ([]byte, error) {
-	var responseBody []byte
-	ar := admReview.Request
-
-	if ar != nil {
-		resp := admissionv1.AdmissionResponse{}
-		var deployment *appsv1.Deployment
-		if err := json.Unmarshal(ar.Object.Raw, &deployment); err != nil {
-			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
-		}
-
-		policy, _ := policies.FindDeploymentPolicy(deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
-		if policy == nil {
-			return responseBody, nil
-		}
-
-		resp.Allowed = true
-		resp.UID = ar.UID
-		pT := admissionv1.PatchTypeJSONPatch
-		resp.PatchType = &pT
-
-		var patches []PatchOperation
-		found := false
-		for cdx, container := range deployment.Spec.Template.Spec.Containers {
-			envVar := 0
-
-			for edx, env := range container.Env {
-				envVar++
-
-				if env.Name == policy.Key {
-					patches = append(patches, PatchOperation{
-						Op:    "replace",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-						Value: clusterName,
-					})
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				if envVar == 0 {
-					patches = append(patches, PatchOperation{
-						Op:   "add",
-						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
-						Value: []corev1.EnvVar{
-							{
-								Name:  policy.Key,
-								Value: clusterName,
-							},
-						},
-					})
-				} else {
-					patches = append(patches, PatchOperation{
-						Op:    "add",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-						Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
-					})
-				}
-			}
-		}
-
-		patchBytes, err := json.Marshal(patches)
-		if err != nil {
-			return nil, err
-		}
-
-		resp.Patch = patchBytes
-		resp.Result = &metav1.Status{
-			Status: "Success",
-		}
-
-		admReview.Response = &resp
-		response, err := json.Marshal(admReview)
-		if err != nil {
-			return nil, err
-		}
-
-		responseBody = response
+	adminReview.Response = &adminResponse
+	responseBody, err := json.Marshal(adminReview)
+	if err != nil {
+		return nil, err
 	}
 
 	return responseBody, nil
 }
 
-func mutateDaemonSet(admReview admissionv1.AdmissionReview, clusterName string) ([]byte, error) {
-	var responseBody []byte
-	ar := admReview.Request
-
-	if ar != nil {
-		resp := admissionv1.AdmissionResponse{}
-		var daemonSet *appsv1.DaemonSet
-		if err := json.Unmarshal(ar.Object.Raw, &daemonSet); err != nil {
-			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
-		}
-
-		resp.Allowed = true
-		resp.UID = ar.UID
-
-		policy, _ := policies.FindDaemonSetPolicy(daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
-		if policy == nil {
-			return responseBody, nil
-		}
-
-		pT := admissionv1.PatchTypeJSONPatch
-		resp.PatchType = &pT
-
-		var patches []PatchOperation
-		found := false
-		for cdx, container := range daemonSet.Spec.Template.Spec.Containers {
-			envVar := 0
-
-			for edx, env := range container.Env {
-				envVar++
-
-				if env.Name == policy.Key {
-					patches = append(patches, PatchOperation{
-						Op:    "replace",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-						Value: clusterName,
-					})
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				if envVar == 0 {
-					patches = append(patches, PatchOperation{
-						Op:   "add",
-						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
-						Value: []corev1.EnvVar{
-							{Name: policy.Key, Value: clusterName},
-						},
-					})
-				} else {
-					patches = append(patches, PatchOperation{
-						Op:    "add",
-						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-						Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
-					})
-				}
-			}
-		}
-
-		patchBytes, err := json.Marshal(patches)
-		if err != nil {
-			return nil, err
-		}
-
-		resp.Patch = patchBytes
-		resp.Result = &metav1.Status{
-			Status: "Success",
-		}
-
-		admReview.Response = &resp
-		response, err := json.Marshal(admReview)
-		if err != nil {
-			return nil, err
-		}
-
-		responseBody = response
+func mutateDeployment(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+	var deployment *appsv1.Deployment
+	if err := json.Unmarshal(request.Object.Raw, &deployment); err != nil {
+		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	return responseBody, nil
-}
+	policy, _ := policies.FindDeploymentPolicy(deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
+	if policy == nil {
+		return nil
+	}
 
-func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) ([]byte, error) {
-	var responseBody []byte
-	ar := admReview.Request
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
 
-	if ar != nil {
-		resp := admissionv1.AdmissionResponse{}
-		var configMap *corev1.ConfigMap
-		if err := json.Unmarshal(ar.Object.Raw, &configMap); err != nil {
-			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
-		}
+	var patches []PatchOperation
+	found := false
+	for cdx, container := range deployment.Spec.Template.Spec.Containers {
+		envVar := 0
 
-		policy, _ := policies.FindConfigMapPolicy(configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
-		if policy == nil {
-			return responseBody, nil
-		}
+		for edx, env := range container.Env {
+			envVar++
 
-		resp.Allowed = true
-		resp.UID = ar.UID
-		pT := admissionv1.PatchTypeJSONPatch
-		resp.PatchType = &pT
-
-		var patches []PatchOperation
-		found := false
-		for key, _ := range configMap.Data {
-			if key == policy.Key {
+			if env.Name == policy.Key {
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
-					Path:  fmt.Sprintf("/data/%s", key),
+					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
 					Value: clusterName,
 				})
 				found = true
@@ -249,31 +97,150 @@ func mutateConfigMap(admReview admissionv1.AdmissionReview, clusterName string) 
 		}
 
 		if !found {
-			patches = append(patches, PatchOperation{
-				Op:    "add",
-				Path:  fmt.Sprintf("/data/%s", policy.Key),
-				Value: clusterName,
-			})
+			if envVar == 0 {
+				patches = append(patches, PatchOperation{
+					Op:   "add",
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
+					Value: []corev1.EnvVar{
+						{
+							Name:  policy.Key,
+							Value: clusterName,
+						},
+					},
+				})
+			} else {
+				patches = append(patches, PatchOperation{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
+					Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
+				})
+			}
 		}
-
-		patchBytes, err := json.Marshal(patches)
-		if err != nil {
-			return nil, err
-		}
-
-		resp.Patch = patchBytes
-		resp.Result = &metav1.Status{
-			Status: "Success",
-		}
-
-		admReview.Response = &resp
-		response, err := json.Marshal(admReview)
-		if err != nil {
-			return nil, err
-		}
-
-		responseBody = response
 	}
 
-	return responseBody, nil
+	patchBytes, err := json.Marshal(patches)
+	if err != nil {
+		return err
+	}
+
+	response.Patch = patchBytes
+	response.Result = &metav1.Status{
+		Status: "Success",
+	}
+
+	return nil
+}
+
+func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+	var daemonSet *appsv1.DaemonSet
+	if err := json.Unmarshal(request.Object.Raw, &daemonSet); err != nil {
+		return fmt.Errorf("unable unmarshal pod json object %v", err)
+	}
+
+	policy, _ := policies.FindDaemonSetPolicy(daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
+	if policy == nil {
+		return nil
+	}
+
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
+
+	var patches []PatchOperation
+	found := false
+	for cdx, container := range daemonSet.Spec.Template.Spec.Containers {
+		envVar := 0
+
+		for edx, env := range container.Env {
+			envVar++
+
+			if env.Name == policy.Key {
+				patches = append(patches, PatchOperation{
+					Op:    "replace",
+					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
+					Value: clusterName,
+				})
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			if envVar == 0 {
+				patches = append(patches, PatchOperation{
+					Op:   "add",
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
+					Value: []corev1.EnvVar{
+						{Name: policy.Key, Value: clusterName},
+					},
+				})
+			} else {
+				patches = append(patches, PatchOperation{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
+					Value: corev1.EnvVar{Name: policy.Key, Value: clusterName},
+				})
+			}
+		}
+	}
+
+	patchBytes, err := json.Marshal(patches)
+	if err != nil {
+		return err
+	}
+
+	response.Patch = patchBytes
+	response.Result = &metav1.Status{
+		Status: "Success",
+	}
+
+	return nil
+}
+
+func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, clusterName string) error {
+	var configMap *corev1.ConfigMap
+	if err := json.Unmarshal(request.Object.Raw, &configMap); err != nil {
+		return fmt.Errorf("unable unmarshal pod json object %v", err)
+	}
+
+	policy, _ := policies.FindConfigMapPolicy(configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
+	if policy == nil {
+		return nil
+	}
+
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
+
+	var patches []PatchOperation
+	found := false
+	for key, _ := range configMap.Data {
+		if key == policy.Key {
+			patches = append(patches, PatchOperation{
+				Op:    "replace",
+				Path:  fmt.Sprintf("/data/%s", key),
+				Value: clusterName,
+			})
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		patches = append(patches, PatchOperation{
+			Op:    "add",
+			Path:  fmt.Sprintf("/data/%s", policy.Key),
+			Value: clusterName,
+		})
+	}
+
+	patchBytes, err := json.Marshal(patches)
+	if err != nil {
+		return err
+	}
+
+	response.Patch = patchBytes
+	response.Result = &metav1.Status{
+		Status: "Success",
+	}
+
+	return nil
 }

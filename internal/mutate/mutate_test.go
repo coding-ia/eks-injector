@@ -1,8 +1,15 @@
 package mutate
 
-import "testing"
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	admissionv1 "k8s.io/api/admission/v1"
+	"testing"
+)
 
-func TestMutatesValidRequest(t *testing.T) {
+func TestMutatesDeploymentRequest(t *testing.T) {
 	rawJSON := `{
 		"kind": "AdmissionReview",
 		"apiVersion": "admission.k8s.io/v1",
@@ -176,8 +183,19 @@ func TestMutatesValidRequest(t *testing.T) {
 	}`
 
 	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "f54e0ee9713c2142a45cc2a8d7e194aa" {
+			t.Fail()
+		}
+	}
 }
 
 func TestMutatesConfigMapRequest(t *testing.T) {
@@ -266,8 +284,19 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 	}`
 
 	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "d41d8cd98f00b204e9800998ecf8427e" {
+			t.Fail()
+		}
+	}
 }
 
 func TestMutatesDaemonSetRequest(t *testing.T) {
@@ -454,6 +483,30 @@ func TestMutatesDaemonSetRequest(t *testing.T) {
 	}`
 
 	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "d41d8cd98f00b204e9800998ecf8427e" {
+			t.Fail()
+		}
+	}
+}
+
+func getAdmissionReview(data []byte) (*admissionv1.AdmissionReview, error) {
+	var adminReview *admissionv1.AdmissionReview
+	if err := json.Unmarshal(data, &adminReview); err != nil {
+		return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
+	}
+	return adminReview, nil
+}
+
+func getMD5Hash(data []byte) string {
+	hash := md5.Sum(data)
+	return hex.EncodeToString(hash[:])
 }

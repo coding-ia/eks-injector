@@ -44,6 +44,14 @@ func FindDeploymentPolicy(namespace string, name string, keyType string) (*Polic
 			Type:      keyType,
 		}
 	}
+	if namespace == "default" && name == "nginx-deployment" && keyType == "env" {
+		policy = &Policy{
+			Namespace: namespace,
+			Name:      name,
+			Key:       "CLUSTER_NAME",
+			Type:      keyType,
+		}
+	}
 
 	return policy, nil
 }
