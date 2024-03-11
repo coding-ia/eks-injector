@@ -23,6 +23,10 @@ func StartServer() {
 		log.Fatal(err)
 	}
 
+	log.Printf("Loaded %d ConfigMap policies.", len(globalPolicies.ConfigMaps))
+	log.Printf("Loaded %d Deployment policies.", len(globalPolicies.Deployments))
+	log.Printf("Loaded %d DaemonSet policies.", len(globalPolicies.DaemonSets))
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/inject", handleWebhook)
