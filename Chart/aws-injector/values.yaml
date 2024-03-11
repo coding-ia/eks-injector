@@ -1,5 +1,8 @@
 global:
-  clusterName: my-test-cluster
+  cluster:
+    name:
+    version:
+    environment:
 
 image:
   repository: public.ecr.aws/z8r1k8w6/

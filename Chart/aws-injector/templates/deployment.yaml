@@ -26,8 +26,18 @@ spec:
             mountPath: /etc/ssl
             readOnly: true
           env:
+          {{- if .Values.global.cluster.name }}
           - name: CLUSTER_NAME
-            value: {{ .Values.global.clusterName }}
+            value: {{ .Values.global.cluster.name }}
+          {{- end }}
+          {{- if .Values.global.cluster.version }}
+          - name: CLUSTER_VERSION
+            value: {{ quote .Values.global.cluster.version }}
+          {{- end }}
+          {{- if .Values.global.cluster.environment }}
+          - name: CLUSTER_ENVIRONMENT
+            value: {{ .Values.global.cluster.environment }}
+          {{- end }}
           - name: NODE_NAME
             valueFrom:
               fieldRef:
