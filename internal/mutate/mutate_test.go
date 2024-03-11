@@ -2,6 +2,7 @@ package mutate
 
 import (
 	"crypto/md5"
+	"eks-inject/internal/policies"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -187,8 +188,8 @@ func TestMutatesDeploymentRequest(t *testing.T) {
 		"Version":     "1.27",
 		"Environment": "sbx",
 	}
-
-	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -294,8 +295,8 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 		"Version":     "1.27",
 		"Environment": "sbx",
 	}
-
-	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -401,8 +402,8 @@ func TestMutatesConfigMapRequestSSM(t *testing.T) {
 		"Version":     "1.27",
 		"Environment": "sbx",
 	}
-
-	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -412,7 +413,7 @@ func TestMutatesConfigMapRequestSSM(t *testing.T) {
 			t.Fail()
 		}
 		hash := getMD5Hash(ar.Response.Patch)
-		if hash != "93a40493cb6cb61e4d7e409737099fe6" {
+		if hash != "b62c19a25078503a5e26105ca5552256" {
 			t.Fail()
 		}
 	}
@@ -606,8 +607,8 @@ func TestMutatesDaemonSetRequest(t *testing.T) {
 		"Version":     "1.27",
 		"Environment": "sbx",
 	}
-
-	data, err := ProcessAdmissionReview([]byte(rawJSON), values)
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
 	if err == nil {
 		ar, err := getAdmissionReview(data)
 		if err != nil {
@@ -634,4 +635,46 @@ func getAdmissionReview(data []byte) (*admissionv1.AdmissionReview, error) {
 func getMD5Hash(data []byte) string {
 	hash := md5.Sum(data)
 	return hex.EncodeToString(hash[:])
+}
+
+func testPolicies() policies.Policies {
+	return policies.Policies{
+		Deployments: []*policies.Policy{
+			{
+				Namespace: "default",
+				Name:      "nginx-deployment",
+				Key:       "CLUSTER_NAME",
+				Value:     "{{ .ClusterName }}",
+				Type:      "env",
+			},
+		},
+		DaemonSets: []*policies.Policy{
+			{
+				Namespace: "test",
+				Name:      "nginx-daemonset",
+				Key:       "AQUA_LOGICAL_NAME",
+				Value:     "{{ .ClusterName }}",
+				Type:      "env",
+			},
+		},
+		ConfigMaps: []*policies.Policy{
+			{
+				Namespace: "default",
+				Name:      "example-configmap",
+				Key:       "logicalName",
+				Value:     "{{ .ClusterName }}",
+			},
+			{
+				Namespace: "default",
+				Name:      "example-configmap-ssm",
+				Key:       "logicalName",
+				Value:     "",
+				SSM: policies.SSMParameter{
+					Region:  "us-east-2",
+					Name:    "/cluster/{{ .Version }}/license",
+					Decrypt: false,
+				},
+			},
+		},
+	}
 }

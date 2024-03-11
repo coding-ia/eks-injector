@@ -4,4 +4,4 @@ metadata:
   name: eks-inject-policies
 data:
   policies.json: |
-    {{ (.Files.Get .Values.policies.file) | indent 4 }}
+{{ .Files.Get .Values.policies.file | indent 4 }}

@@ -3,6 +3,7 @@ package server
 import (
 	"eks-inject/internal/discovery"
 	"eks-inject/internal/mutate"
+	"eks-inject/internal/policies"
 	"fmt"
 	"io"
 	"log"
@@ -12,9 +13,15 @@ import (
 )
 
 var globalVariables map[string]string
+var globalPolicies policies.Policies
 
 func StartServer() {
+	var err error
 	globalVariables = BuildConfig()
+	globalPolicies, err = policies.LoadPolicies("/mnt/data/policies.json")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mux := http.NewServeMux()
 
@@ -87,7 +94,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Println(string(body))
 
-	responseBody, err := mutate.ProcessAdmissionReview(body, globalVariables)
+	responseBody, err := mutate.ProcessAdmissionReview(body, globalVariables, globalPolicies)
 	if err != nil {
 		log.Println(err)
 	}

@@ -20,7 +20,7 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func ProcessAdmissionReview(content []byte, variables map[string]string) ([]byte, error) {
+func ProcessAdmissionReview(content []byte, variables map[string]string, p policies.Policies) ([]byte, error) {
 	adminReview := admissionv1.AdmissionReview{}
 
 	if err := json.Unmarshal(content, &adminReview); err != nil {
@@ -39,11 +39,11 @@ func ProcessAdmissionReview(content []byte, variables map[string]string) ([]byte
 	var err error
 	switch adminReview.Request.Kind.Kind {
 	case "Deployment":
-		err = mutateDeployment(adminReview.Request, &adminResponse, variables)
+		err = mutateDeployment(adminReview.Request, &adminResponse, variables, p)
 	case "ConfigMap":
-		err = mutateConfigMap(adminReview.Request, &adminResponse, variables)
+		err = mutateConfigMap(adminReview.Request, &adminResponse, variables, p)
 	case "DaemonSet":
-		err = mutateDaemonSet(adminReview.Request, &adminResponse, variables)
+		err = mutateDaemonSet(adminReview.Request, &adminResponse, variables, p)
 	default:
 		log.Println("Unable to process resource.")
 	}
@@ -61,13 +61,13 @@ func ProcessAdmissionReview(content []byte, variables map[string]string) ([]byte
 	return responseBody, nil
 }
 
-func mutateDeployment(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
+func mutateDeployment(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string, p policies.Policies) error {
 	var deployment *appsv1.Deployment
 	if err := json.Unmarshal(request.Object.Raw, &deployment); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindDeploymentPolicy(deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
+	policy, _ := policies.FindDeploymentPolicy(p.Deployments, deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
 	if policy == nil {
 		return nil
 	}
@@ -134,13 +134,13 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 	return nil
 }
 
-func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
+func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string, p policies.Policies) error {
 	var daemonSet *appsv1.DaemonSet
 	if err := json.Unmarshal(request.Object.Raw, &daemonSet); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindDaemonSetPolicy(daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
+	policy, _ := policies.FindDaemonSetPolicy(p.DaemonSets, daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
 	if policy == nil {
 		return nil
 	}
@@ -204,13 +204,13 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 	return nil
 }
 
-func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string) error {
+func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv1.AdmissionResponse, variables map[string]string, p policies.Policies) error {
 	var configMap *corev1.ConfigMap
 	if err := json.Unmarshal(request.Object.Raw, &configMap); err != nil {
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindConfigMapPolicy(configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
+	policy, _ := policies.FindConfigMapPolicy(p.ConfigMaps, configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
 	if policy == nil {
 		return nil
 	}
