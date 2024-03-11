@@ -1,0 +1,28 @@
+{
+    "DaemonSets": [
+        {
+            "namespace": "aqua",
+            "name": "aqua-enforcer-ds",
+            "key": "AQUA_LOGICAL_NAME",
+            "value": "{{ .ClusterName }}",
+            "keyType": "env"
+        }
+    ],
+    "Deployments": [
+        {
+            "namespace": "sentinelone",
+            "name": "sentinelone-helper",
+            "key": "CLUSTER_NAME",
+            "value": "{{ .ClusterName }}",
+            "keyType": "env"
+        }
+    ],
+    "ConfigMaps": [
+        {
+            "namespace": "aqua",
+            "name": "aqua-csp-kube-enforcer",
+            "key": "AQUA_LOGICAL_NAME",
+            "value": "{{ .ClusterName }}"
+        }
+    ]
+}

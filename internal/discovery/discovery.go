@@ -1,6 +1,7 @@
-package node
+package discovery
 
 import (
+	"fmt"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -13,8 +14,28 @@ func DiscoverClusterName() (string, error) {
 }
 
 func DiscoverEnvironment() (string, error) {
-
 	return getNodeLabel("alpha.coding-ia.com/environment")
+}
+
+func DiscoverKubernetesVersion() (string, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return "", err
+	}
+
+	clientSet, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	serverVersion, err := clientSet.Discovery().ServerVersion()
+	if err != nil {
+		return "", err
+	}
+
+	versionNumber := fmt.Sprintf("%s.%s", serverVersion.Major, serverVersion.Minor)
+
+	return versionNumber, nil
 }
 
 func getNodeLabel(label string) (string, error) {

@@ -1,0 +1,9 @@
+{{ printf "File name: %s" .Values.policies.file }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eks-inject-policies
+data:
+  {{ .Values.policies.file }}: |
+{{ .Files.Get .Values.policies.file | indent 4 }}

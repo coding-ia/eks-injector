@@ -1,8 +1,16 @@
 package mutate
 
-import "testing"
+import (
+	"crypto/md5"
+	"eks-inject/internal/policies"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	admissionv1 "k8s.io/api/admission/v1"
+	"testing"
+)
 
-func TestMutatesValidRequest(t *testing.T) {
+func TestMutatesDeploymentRequest(t *testing.T) {
 	rawJSON := `{
 		"kind": "AdmissionReview",
 		"apiVersion": "admission.k8s.io/v1",
@@ -175,9 +183,26 @@ func TestMutatesValidRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "f54e0ee9713c2142a45cc2a8d7e194aa" {
+			t.Fail()
+		}
+	}
 }
 
 func TestMutatesConfigMapRequest(t *testing.T) {
@@ -265,9 +290,133 @@ func TestMutatesConfigMapRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "93a40493cb6cb61e4d7e409737099fe6" {
+			t.Fail()
+		}
+	}
+}
+
+func TestMutatesConfigMapRequestSSM(t *testing.T) {
+	rawJSON := `{
+		"kind": "AdmissionReview",
+		"apiVersion": "admission.k8s.io/v1",
+		"request": {
+			"uid": "42b2eea6-2458-421a-ad7d-cd49f90abec5",
+			"kind": {
+				"group": "",
+				"version": "v1",
+				"kind": "ConfigMap"
+			},
+			"resource": {
+				"group": "",
+				"version": "v1",
+				"resource": "configmaps"
+			},
+			"requestKind": {
+				"group": "",
+				"version": "v1",
+				"kind": "ConfigMap"
+			},
+			"requestResource": {
+				"group": "",
+				"version": "v1",
+				"resource": "configmaps"
+			},
+			"name": "example-configmap-ssm",
+			"namespace": "default",
+			"operation": "CREATE",
+			"userInfo": {
+				"username": "system:admin",
+				"groups": [
+					"system:masters",
+					"system:authenticated"
+				]
+			},
+			"object": {
+				"kind": "ConfigMap",
+				"apiVersion": "v1",
+				"metadata": {
+					"name": "example-configmap-ssm",
+					"namespace": "default",
+					"creationTimestamp": null,
+					"annotations": {
+						"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"example-configmap\",\"namespace\":\"default\"}}\n"
+					},
+					"managedFields": [
+						{
+							"manager": "kubectl-client-side-apply",
+							"operation": "Update",
+							"apiVersion": "v1",
+							"time": "2024-03-07T02:43:38Z",
+							"fieldsType": "FieldsV1",
+							"fieldsV1": {
+								"f:data": {
+									".": {},
+									"f:key1": {},
+									"f:key2": {},
+									"f:key3": {}
+								},
+								"f:metadata": {
+									"f:annotations": {
+										".": {},
+										"f:kubectl.kubernetes.io/last-applied-configuration": {}
+									}
+								}
+							}
+						}
+					]
+				},
+				"data": {
+					"logicalName": "test"
+				}
+			},
+			"oldObject": null,
+			"dryRun": false,
+			"options": {
+				"kind": "CreateOptions",
+				"apiVersion": "meta.k8s.io/v1",
+				"fieldManager": "kubectl-client-side-apply",
+				"fieldValidation": "Strict"
+			}
+		}
+	}`
+
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "b62c19a25078503a5e26105ca5552256" {
+			t.Fail()
+		}
+	}
 }
 
 func TestMutatesDaemonSetRequest(t *testing.T) {
@@ -453,7 +602,79 @@ func TestMutatesDaemonSetRequest(t *testing.T) {
 		}
 	}`
 
-	data, err := ProcessAdmissionReview([]byte(rawJSON), "test-cluster")
-	_ = data
-	_ = err
+	values := map[string]string{
+		"ClusterName": "test-cluster",
+		"Version":     "1.27",
+		"Environment": "sbx",
+	}
+	tp := testPolicies()
+	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
+	if err == nil {
+		ar, err := getAdmissionReview(data)
+		if err != nil {
+			t.Fail()
+		}
+		if ar.Request.UID != ar.Response.UID {
+			t.Fail()
+		}
+		hash := getMD5Hash(ar.Response.Patch)
+		if hash != "78d237c223420aefb9f540ce20650e53" {
+			t.Fail()
+		}
+	}
+}
+
+func getAdmissionReview(data []byte) (*admissionv1.AdmissionReview, error) {
+	var adminReview *admissionv1.AdmissionReview
+	if err := json.Unmarshal(data, &adminReview); err != nil {
+		return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
+	}
+	return adminReview, nil
+}
+
+func getMD5Hash(data []byte) string {
+	hash := md5.Sum(data)
+	return hex.EncodeToString(hash[:])
+}
+
+func testPolicies() policies.Policies {
+	return policies.Policies{
+		Deployments: []*policies.Policy{
+			{
+				Namespace: "default",
+				Name:      "nginx-deployment",
+				Key:       "CLUSTER_NAME",
+				Value:     "{{ .ClusterName }}",
+				Type:      "env",
+			},
+		},
+		DaemonSets: []*policies.Policy{
+			{
+				Namespace: "test",
+				Name:      "nginx-daemonset",
+				Key:       "AQUA_LOGICAL_NAME",
+				Value:     "{{ .ClusterName }}",
+				Type:      "env",
+			},
+		},
+		ConfigMaps: []*policies.Policy{
+			{
+				Namespace: "default",
+				Name:      "example-configmap",
+				Key:       "logicalName",
+				Value:     "{{ .ClusterName }}",
+			},
+			{
+				Namespace: "default",
+				Name:      "example-configmap-ssm",
+				Key:       "logicalName",
+				Value:     "",
+				SSM: policies.SSMParameter{
+					Region:  "us-east-2",
+					Name:    "/cluster/{{ .Version }}/license",
+					Decrypt: false,
+				},
+			},
+		},
+	}
 }

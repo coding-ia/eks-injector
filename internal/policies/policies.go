@@ -1,5 +1,10 @@
 package policies
 
+import (
+	"encoding/json"
+	"os"
+)
+
 type Policies struct {
 	DaemonSets  []*Policy `json:"DaemonSets"`
 	Deployments []*Policy `json:"Deployments"`
@@ -7,16 +12,6 @@ type Policies struct {
 }
 
 type Policy struct {
-	Namespace   string `json:"namespace"`
-	Name        string `json:"name"`
-	Key         string `json:"key"`
-	Type        string `json:"keyType"`
-	Value       string `json:"value,omitempty"`
-	SkipAdd     bool   `json:"skipAdd"`
-	SkipReplace bool   `json:"skipReplace"`
-}
-
-type ConfigPolicy struct {
 	Namespace   string       `json:"namespace"`
 	Name        string       `json:"name"`
 	Key         string       `json:"key"`
@@ -33,47 +28,47 @@ type SSMParameter struct {
 	Decrypt bool   `json:"decrypt"`
 }
 
-func FindDeploymentPolicy(namespace string, name string, keyType string) (*Policy, error) {
-	var policy *Policy
-
-	if namespace == "sentinelone" && name == "sentinelone-helper" && keyType == "env" {
-		policy = &Policy{
-			Namespace: namespace,
-			Name:      name,
-			Key:       "CLUSTER_NAME",
-			Type:      keyType,
-		}
+func LoadPolicies(path string) (Policies, error) {
+	var policies Policies
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return policies, err
 	}
 
-	return policy, nil
+	err = json.Unmarshal(data, &policies)
+	if err != nil {
+		return policies, err
+	}
+
+	return policies, nil
 }
 
-func FindDaemonSetPolicy(namespace string, name string, keyType string) (*Policy, error) {
-	var policy *Policy
-
-	if namespace == "aqua" && name == "aqua-enforcer-ds" && keyType == "env" {
-		policy = &Policy{
-			Namespace: namespace,
-			Name:      name,
-			Key:       "AQUA_LOGICAL_NAME",
-			Type:      keyType,
+func FindDeploymentPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+	for _, v := range policies {
+		if v.Namespace == namespace && v.Name == name && v.Type == keyType {
+			return v, nil
 		}
 	}
 
-	return policy, nil
+	return nil, nil
 }
 
-func FindConfigMapPolicy(namespace string, name string, keyType string) (*Policy, error) {
-	var policy *Policy
-
-	if namespace == "aqua" && name == "aqua-csp-kube-enforcer" && keyType == "" {
-		policy = &Policy{
-			Namespace: namespace,
-			Name:      name,
-			Key:       "AQUA_LOGICAL_NAME",
-			Type:      "",
+func FindDaemonSetPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+	for _, v := range policies {
+		if v.Namespace == namespace && v.Name == name && v.Type == keyType {
+			return v, nil
 		}
 	}
 
-	return policy, nil
+	return nil, nil
+}
+
+func FindConfigMapPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+	for _, v := range policies {
+		if v.Namespace == namespace && v.Name == name {
+			return v, nil
+		}
+	}
+
+	return nil, nil
 }
