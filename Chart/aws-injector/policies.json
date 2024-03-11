@@ -21,7 +21,7 @@
         {
             "namespace": "aqua",
             "name": "aqua-csp-kube-enforcer",
-            "key": "CLUSTER_NAME",
+            "key": "AQUA_LOGICAL_NAME",
             "value": "{{ .ClusterName }}"
         }
     ]
