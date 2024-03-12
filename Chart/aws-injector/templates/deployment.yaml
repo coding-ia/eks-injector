@@ -45,7 +45,9 @@ spec:
           - name: AWS_ACCESS_KEY_ID
             value: {{ .Values.aws.credentials.accessKey }}
           - name: AWS_SECRET_ACCESS_KEY
-            value: {{ .Values.aws.credentials.secretKey }}            
+            value: {{ .Values.aws.credentials.secretKey }} 
+          - name: AWS_DEFAULT_REGION
+            value: {{ .Values.aws.credentials.region }} 
           {{- end }}
           - name: NODE_NAME
             valueFrom:
