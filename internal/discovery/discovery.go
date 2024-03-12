@@ -10,11 +10,11 @@ import (
 )
 
 func DiscoverClusterName() (string, error) {
-	return getNodeLabel("alpha.coding-ia.com/cluster-name")
+	return getNodeLabel("awseks.coding-ia.com/cluster-name")
 }
 
 func DiscoverEnvironment() (string, error) {
-	return getNodeLabel("alpha.coding-ia.com/environment")
+	return getNodeLabel("awseks.coding-ia.com/environment")
 }
 
 func DiscoverKubernetesVersion() (string, error) {
