@@ -2,7 +2,7 @@ package mutate
 
 import (
 	"crypto/md5"
-	"eks-inject/internal/policies"
+	"eks-injector/internal/policies"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"

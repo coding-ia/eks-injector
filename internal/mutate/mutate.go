@@ -1,9 +1,9 @@
 package mutate
 
 import (
-	"eks-inject/internal/parameter"
-	"eks-inject/internal/policies"
-	"eks-inject/internal/string_parser"
+	"eks-injector/internal/parameter"
+	"eks-injector/internal/policies"
+	"eks-injector/internal/string_parser"
 	"encoding/json"
 	"errors"
 	"fmt"
