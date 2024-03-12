@@ -67,56 +67,52 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindDeploymentPolicy(p.Deployments, deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
-	if policy == nil {
-		return nil
-	}
-
-	value, err := getValue(policy, variables)
-	if err != nil {
-		return err
-	}
-
-	pT := admissionv1.PatchTypeJSONPatch
-	response.PatchType = &pT
-
+	matchingPolicies := policies.FindDeploymentPolicy(p.Deployments, deployment.ObjectMeta.Namespace, deployment.ObjectMeta.Name, "env")
 	var patches []PatchOperation
-	found := false
-	for cdx, container := range deployment.Spec.Template.Spec.Containers {
-		envVar := 0
 
-		for edx, env := range container.Env {
-			envVar++
-
-			if env.Name == policy.Key {
-				patches = append(patches, PatchOperation{
-					Op:    "replace",
-					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-					Value: value,
-				})
-				found = true
-				break
-			}
+	for _, policy := range matchingPolicies {
+		value, err := getValue(policy, variables)
+		if err != nil {
+			return err
 		}
 
-		if !found {
-			if envVar == 0 {
-				patches = append(patches, PatchOperation{
-					Op:   "add",
-					Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
-					Value: []corev1.EnvVar{
-						{
-							Name:  policy.Key,
-							Value: value,
+		found := false
+		for cdx, container := range deployment.Spec.Template.Spec.Containers {
+			envVar := 0
+
+			for edx, env := range container.Env {
+				envVar++
+
+				if env.Name == policy.Key {
+					patches = append(patches, PatchOperation{
+						Op:    "replace",
+						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
+						Value: value,
+					})
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				if envVar == 0 {
+					patches = append(patches, PatchOperation{
+						Op:   "add",
+						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
+						Value: []corev1.EnvVar{
+							{
+								Name:  policy.Key,
+								Value: value,
+							},
 						},
-					},
-				})
-			} else {
-				patches = append(patches, PatchOperation{
-					Op:    "add",
-					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-					Value: corev1.EnvVar{Name: policy.Key, Value: value},
-				})
+					})
+				} else {
+					patches = append(patches, PatchOperation{
+						Op:    "add",
+						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
+						Value: corev1.EnvVar{Name: policy.Key, Value: value},
+					})
+				}
 			}
 		}
 	}
@@ -126,6 +122,8 @@ func mutateDeployment(request *admissionv1.AdmissionRequest, response *admission
 		return err
 	}
 
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
 	response.Patch = patchBytes
 	response.Result = &metav1.Status{
 		Status: "Success",
@@ -140,53 +138,49 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindDaemonSetPolicy(p.DaemonSets, daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
-	if policy == nil {
-		return nil
-	}
-
-	value, err := getValue(policy, variables)
-	if err != nil {
-		return err
-	}
-
-	pT := admissionv1.PatchTypeJSONPatch
-	response.PatchType = &pT
-
+	matchingPolicies := policies.FindDaemonSetPolicy(p.DaemonSets, daemonSet.ObjectMeta.Namespace, daemonSet.ObjectMeta.Name, "env")
 	var patches []PatchOperation
-	found := false
-	for cdx, container := range daemonSet.Spec.Template.Spec.Containers {
-		envVar := 0
 
-		for edx, env := range container.Env {
-			envVar++
-
-			if env.Name == policy.Key {
-				patches = append(patches, PatchOperation{
-					Op:    "replace",
-					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
-					Value: value,
-				})
-				found = true
-				break
-			}
+	for _, policy := range matchingPolicies {
+		value, err := getValue(policy, variables)
+		if err != nil {
+			return err
 		}
 
-		if !found {
-			if envVar == 0 {
-				patches = append(patches, PatchOperation{
-					Op:   "add",
-					Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
-					Value: []corev1.EnvVar{
-						{Name: policy.Key, Value: value},
-					},
-				})
-			} else {
-				patches = append(patches, PatchOperation{
-					Op:    "add",
-					Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
-					Value: corev1.EnvVar{Name: policy.Key, Value: value},
-				})
+		found := false
+		for cdx, container := range daemonSet.Spec.Template.Spec.Containers {
+			envVar := 0
+
+			for edx, env := range container.Env {
+				envVar++
+
+				if env.Name == policy.Key {
+					patches = append(patches, PatchOperation{
+						Op:    "replace",
+						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/%d/value", cdx, edx),
+						Value: value,
+					})
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				if envVar == 0 {
+					patches = append(patches, PatchOperation{
+						Op:   "add",
+						Path: fmt.Sprintf("/spec/template/spec/containers/%d/env", cdx),
+						Value: []corev1.EnvVar{
+							{Name: policy.Key, Value: value},
+						},
+					})
+				} else {
+					patches = append(patches, PatchOperation{
+						Op:    "add",
+						Path:  fmt.Sprintf("/spec/template/spec/containers/%d/env/-", cdx),
+						Value: corev1.EnvVar{Name: policy.Key, Value: value},
+					})
+				}
 			}
 		}
 	}
@@ -196,6 +190,8 @@ func mutateDaemonSet(request *admissionv1.AdmissionRequest, response *admissionv
 		return err
 	}
 
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
 	response.Patch = patchBytes
 	response.Result = &metav1.Status{
 		Status: "Success",
@@ -210,39 +206,35 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		return fmt.Errorf("unable unmarshal pod json object %v", err)
 	}
 
-	policy, _ := policies.FindConfigMapPolicy(p.ConfigMaps, configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name, "")
-	if policy == nil {
-		return nil
-	}
-
-	value, err := getValue(policy, variables)
-	if err != nil {
-		return err
-	}
-
-	pT := admissionv1.PatchTypeJSONPatch
-	response.PatchType = &pT
-
+	matchingPolicies := policies.FindConfigMapPolicy(p.ConfigMaps, configMap.ObjectMeta.Namespace, configMap.ObjectMeta.Name)
 	var patches []PatchOperation
-	found := false
-	for key, _ := range configMap.Data {
-		if key == policy.Key {
+
+	for _, policy := range matchingPolicies {
+		value, err := getValue(policy, variables)
+		if err != nil {
+			return err
+		}
+
+		found := false
+		for key, _ := range configMap.Data {
+			if key == policy.Key {
+				patches = append(patches, PatchOperation{
+					Op:    "replace",
+					Path:  fmt.Sprintf("/data/%s", key),
+					Value: value,
+				})
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			patches = append(patches, PatchOperation{
-				Op:    "replace",
-				Path:  fmt.Sprintf("/data/%s", key),
+				Op:    "add",
+				Path:  fmt.Sprintf("/data/%s", policy.Key),
 				Value: value,
 			})
-			found = true
-			break
 		}
-	}
-
-	if !found {
-		patches = append(patches, PatchOperation{
-			Op:    "add",
-			Path:  fmt.Sprintf("/data/%s", policy.Key),
-			Value: value,
-		})
 	}
 
 	patchBytes, err := json.Marshal(patches)
@@ -250,6 +242,8 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		return err
 	}
 
+	pT := admissionv1.PatchTypeJSONPatch
+	response.PatchType = &pT
 	response.Patch = patchBytes
 	response.Result = &metav1.Status{
 		Status: "Success",
@@ -258,7 +252,7 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 	return nil
 }
 
-func getValue(policy *policies.Policy, variables map[string]string) (string, error) {
+func getValue(policy policies.Policy, variables map[string]string) (string, error) {
 	if policy.Value == "" && policy.SSM.Name != "" {
 		parameterName, err := string_parser.ParseString(policy.SSM.Name, variables)
 		if err != nil {

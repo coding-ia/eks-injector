@@ -639,7 +639,7 @@ func getMD5Hash(data []byte) string {
 
 func testPolicies() policies.Policies {
 	return policies.Policies{
-		Deployments: []*policies.Policy{
+		Deployments: []policies.Policy{
 			{
 				Namespace: "default",
 				Name:      "nginx-deployment",
@@ -648,7 +648,7 @@ func testPolicies() policies.Policies {
 				Type:      "env",
 			},
 		},
-		DaemonSets: []*policies.Policy{
+		DaemonSets: []policies.Policy{
 			{
 				Namespace: "test",
 				Name:      "nginx-daemonset",
@@ -657,7 +657,7 @@ func testPolicies() policies.Policies {
 				Type:      "env",
 			},
 		},
-		ConfigMaps: []*policies.Policy{
+		ConfigMaps: []policies.Policy{
 			{
 				Namespace: "default",
 				Name:      "example-configmap",
