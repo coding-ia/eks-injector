@@ -41,6 +41,12 @@ spec:
           - name: CLUSTER_ENVIRONMENT
             value: {{ .Values.global.cluster.environment }}
           {{- end }}
+          {{- if .Values.aws.credentials.createCredentials }}
+          - name: AWS_ACCESS_KEY_ID
+            value: {{ .Values.aws.credentials.accessKey }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: {{ .Values.aws.credentials.secretKey }}            
+          {{- end }}
           - name: NODE_NAME
             valueFrom:
               fieldRef:

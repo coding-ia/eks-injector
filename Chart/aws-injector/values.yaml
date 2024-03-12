@@ -21,5 +21,12 @@ webhook:
     key:
   failurePolicy: Ignore
 
+aws:
+  credentials:
+    roleArn:
+    createCredentials: false
+    accessKey:
+    secretKey:
+
 policies:
   file: policies.json
