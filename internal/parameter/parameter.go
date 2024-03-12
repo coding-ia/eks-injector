@@ -15,7 +15,7 @@ func GetParameter(region string, parameterName string, withDecrypt bool, assumeR
 	if assumeRole == "" {
 		sess, err = createSession(region)
 	} else {
-		sess, err = createAssumeRoleSession(assumeRole, "aws-inject", 300, region)
+		sess, err = createAssumeRoleSession(assumeRole, "aws-inject", 900, region)
 	}
 	if err != nil {
 		return "", err
