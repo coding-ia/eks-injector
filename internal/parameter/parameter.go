@@ -35,17 +35,19 @@ func GetParameter(region string, parameterName string, withDecrypt bool, assumeR
 }
 
 func createSession(region string) (*session.Session, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
-	if err != nil {
-		return nil, err
-	}
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config: aws.Config{
+			Region: aws.String(region),
+		},
+	}))
 	return sess, nil
 }
 
 func createAssumeRoleSession(roleArn string, sessionName string, duration int64, region string) (*session.Session, error) {
-	sess := session.Must(session.NewSession())
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
 	stsClient := sts.New(sess)
 
 	assumeRoleOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
