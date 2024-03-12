@@ -1,9 +1,9 @@
 package server
 
 import (
-	"eks-inject/internal/discovery"
-	"eks-inject/internal/mutate"
-	"eks-inject/internal/policies"
+	"eks-injector/internal/discovery"
+	"eks-injector/internal/mutate"
+	"eks-injector/internal/policies"
 	"fmt"
 	"io"
 	"log"
