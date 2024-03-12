@@ -6,9 +6,9 @@ import (
 )
 
 type Policies struct {
-	DaemonSets  []*Policy `json:"DaemonSets"`
-	Deployments []*Policy `json:"Deployments"`
-	ConfigMaps  []*Policy `json:"ConfigMaps"`
+	DaemonSets  []Policy `json:"DaemonSets"`
+	Deployments []Policy `json:"Deployments"`
+	ConfigMaps  []Policy `json:"ConfigMaps"`
 }
 
 type Policy struct {
@@ -44,32 +44,33 @@ func LoadPolicies(path string) (Policies, error) {
 	return policies, nil
 }
 
-func FindDeploymentPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+func FindDeploymentPolicy(policies []Policy, namespace string, name string, keyType string) []Policy {
+	var p []Policy
 	for _, v := range policies {
 		if v.Namespace == namespace && v.Name == name && v.Type == keyType {
-			return v, nil
+			p = append(p, v)
 		}
 	}
 
-	return nil, nil
+	return p
 }
 
-func FindDaemonSetPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+func FindDaemonSetPolicy(policies []Policy, namespace string, name string, keyType string) []Policy {
+	var p []Policy
 	for _, v := range policies {
 		if v.Namespace == namespace && v.Name == name && v.Type == keyType {
-			return v, nil
+			p = append(p, v)
 		}
 	}
-
-	return nil, nil
+	return p
 }
 
-func FindConfigMapPolicy(policies []*Policy, namespace string, name string, keyType string) (*Policy, error) {
+func FindConfigMapPolicy(policies []Policy, namespace string, name string) []Policy {
+	var p []Policy
 	for _, v := range policies {
 		if v.Namespace == namespace && v.Name == name {
-			return v, nil
+			p = append(p, v)
 		}
 	}
-
-	return nil, nil
+	return p
 }
