@@ -23,9 +23,10 @@ type Policy struct {
 }
 
 type SSMParameter struct {
-	Region  string `json:"region"`
-	Name    string `json:"name"`
-	Decrypt bool   `json:"decrypt"`
+	Region     string `json:"region"`
+	Name       string `json:"name"`
+	Decrypt    bool   `json:"decrypt"`
+	AssumeRole string `json:"assumeRole"`
 }
 
 func LoadPolicies(path string) (Policies, error) {

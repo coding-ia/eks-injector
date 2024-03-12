@@ -264,7 +264,7 @@ func getValue(policy *policies.Policy, variables map[string]string) (string, err
 		if err != nil {
 			return "", err
 		}
-		value, err := parameter.GetParameter(policy.SSM.Region, parameterName, policy.SSM.Decrypt)
+		value, err := parameter.GetParameter(policy.SSM.Region, parameterName, policy.SSM.Decrypt, policy.SSM.AssumeRole)
 		return value, err
 	}
 	value, err := string_parser.ParseString(policy.Value, variables)
