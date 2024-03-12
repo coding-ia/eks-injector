@@ -4,8 +4,8 @@ ARG USER=gouser
 
 RUN adduser -D $USER
 
-COPY eks-inject /
+COPY eks-injector /
 
 USER $USER
 
-CMD ["/eks-inject"]
+CMD ["/eks-injector"]
