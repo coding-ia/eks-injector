@@ -3,5 +3,5 @@ kind: ConfigMap
 metadata:
   name: eks-inject-policies
 data:
-  {{ .Values.policies.file }}: |
-{{ .Files.Get .Values.policies.file | indent 4 }}
+  policies.json: |
+{{ .Values.policies.content | indent 4 }}

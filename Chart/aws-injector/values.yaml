@@ -29,4 +29,9 @@ aws:
     secretKey:
 
 policies:
-  file: policies.json
+  content: |
+    {
+      "DaemonSets": [],
+      "Deployments": [],
+      "ConfigMaps": []
+    }
