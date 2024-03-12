@@ -51,7 +51,6 @@ func FindDeploymentPolicy(policies []Policy, namespace string, name string, keyT
 			p = append(p, v)
 		}
 	}
-
 	return p
 }
 
