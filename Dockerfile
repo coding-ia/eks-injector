@@ -1,5 +1,11 @@
 FROM alpine:3.19
 
-COPY eks-inject /
+ARG USER=gouser
 
-CMD ["/eks-inject"]
+RUN adduser -D $USER
+
+COPY eks-injector /
+
+USER $USER
+
+CMD ["/eks-injector"]

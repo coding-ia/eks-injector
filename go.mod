@@ -1,4 +1,4 @@
-module eks-inject
+module eks-injector
 
 go 1.21
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"eks-inject/internal/server"
+	"eks-injector/internal/server"
 	"log"
 )
 
