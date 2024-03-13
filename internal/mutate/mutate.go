@@ -151,7 +151,6 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 					Value: value,
 				})
 			}
-			configVar++
 		}
 	}
 
