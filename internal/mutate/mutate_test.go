@@ -1,14 +1,15 @@
 package mutate
 
 import (
+	"bytes"
 	"crypto/md5"
 	"eks-injector/internal/policies"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	admissionv1 "k8s.io/api/admission/v1"
+	"log"
+	"strings"
 	"testing"
 )
 
@@ -404,9 +405,12 @@ func TestMutatesConfigMapRequestSSM(t *testing.T) {
 		"Version":     "1.27",
 		"Environment": "sbx",
 	}
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
 	tp := testPolicies()
 	data, err := ProcessAdmissionReview([]byte(rawJSON), values, tp)
-	if errors.Is(err, credentials.ErrNoValidProvidersFoundInChain) {
+	loggedText := buf.String()
+	if strings.Contains(loggedText, "Error: NoCredentialProviders: no valid providers in chain. Deprecated.") {
 		return
 	}
 	if err == nil {
