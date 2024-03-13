@@ -121,7 +121,9 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		}
 
 		found := false
+		configVar := 0
 		for key := range configMap.Data {
+			configVar++
 			if key == policy.Key {
 				patches = append(patches, PatchOperation{
 					Op:    "replace",
@@ -134,11 +136,22 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		}
 
 		if !found {
-			patches = append(patches, PatchOperation{
-				Op:    "add",
-				Path:  fmt.Sprintf("/data/%s", policy.Key),
-				Value: value,
-			})
+			if configVar == 0 {
+				patches = append(patches, PatchOperation{
+					Op:   "add",
+					Path: "/data",
+					Value: map[string]string{
+						policy.Key: value,
+					},
+				})
+			} else {
+				patches = append(patches, PatchOperation{
+					Op:    "add",
+					Path:  fmt.Sprintf("/data/%s", policy.Key),
+					Value: value,
+				})
+			}
+			configVar++
 		}
 	}
 
