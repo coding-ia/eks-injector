@@ -11,7 +11,7 @@ build:
 build-docker:
 	docker build -t eks-injector . 
 	
-testacc:
+test:
 	go test ./internal/... -v $(TESTARGS) -timeout 120m -count=1
 
 fmt:
