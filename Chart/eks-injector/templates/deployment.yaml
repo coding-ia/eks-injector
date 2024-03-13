@@ -19,6 +19,9 @@ spec:
         - name: eks-inject-webhook-container
           image: "{{ .Values.image.repository }}{{ .Values.image.name }}:{{ default .Values.image.tag .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
           ports:
             - containerPort: {{ .Values.service.port }}
           volumeMounts:
