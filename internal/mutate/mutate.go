@@ -136,7 +136,7 @@ func mutateConfigMap(request *admissionv1.AdmissionRequest, response *admissionv
 		}
 
 		if !found {
-			if configVar == 0 {
+			if configVar == 0 && len(patches) == 0 {
 				patches = append(patches, PatchOperation{
 					Op:   "add",
 					Path: "/data",
