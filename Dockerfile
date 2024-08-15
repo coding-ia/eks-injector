@@ -7,7 +7,7 @@ COPY . .
 
 RUN CGO_ENABLED=1 GOOS=linux go build
 
-FROM alpine:3.19
+FROM alpine:3.20
 ARG USER=gouser
 
 RUN adduser -D $USER
