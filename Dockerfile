@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS build
+FROM golang:1.24-alpine AS build
 
 RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache --update go gcc g++
@@ -7,7 +7,7 @@ COPY . .
 
 RUN CGO_ENABLED=1 GOOS=linux go build
 
-FROM alpine:3.20
+FROM alpine:3.21
 ARG USER=gouser
 
 RUN adduser -D $USER
